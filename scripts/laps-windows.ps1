@@ -195,10 +195,11 @@ function Invoke-OPApiRequest {
 
         try {
             $params = @{
-                Uri         = $uri
-                Method      = $Method
-                Headers     = $headers
-                ErrorAction = "Stop"
+                Uri            = $uri
+                Method         = $Method
+                Headers        = $headers
+                TimeoutSec     = 30
+                ErrorAction    = "Stop"
             }
 
             if ($Body) {
@@ -211,8 +212,19 @@ function Invoke-OPApiRequest {
         }
         catch {
             $statusCode = $null
-            if ($_.Exception.Response) {
-                $statusCode = [int]$_.Exception.Response.StatusCode
+            try {
+                if ($null -ne $_.Exception -and $null -ne $_.Exception.Response) {
+                    $statusCode = [int]$_.Exception.Response.StatusCode
+                }
+            }
+            catch {
+                # Response property not available (e.g., timeout or connection error)
+            }
+
+            if ($null -eq $statusCode) {
+                Write-LogWarn -Component "1PASSWORD" -Message "Request failed (no HTTP response): $($_.Exception.Message)"
+                $attempt++
+                continue
             }
 
             Write-LogDebug -Component "1PASSWORD" -Message "HTTP response code: $statusCode"
@@ -266,9 +278,9 @@ function Find-OPItem {
     $endpoint = "/v1/vaults/$env:OP_VAULT_ID/items?filter=title%20eq%20%22$encodedTitle%22"
 
     try {
-        $response = Invoke-OPApiRequest -Method "GET" -Endpoint $endpoint
+        $response = @(Invoke-OPApiRequest -Method "GET" -Endpoint $endpoint)
 
-        if (-not $response -or $response.Count -eq 0) {
+        if ($response.Count -eq 0 -or ($response.Count -eq 1 -and $null -eq $response[0])) {
             Write-LogInfo -Component "1PASSWORD" -Message "No existing entry found"
             return $null
         }
@@ -299,6 +311,12 @@ function New-OPItemPayload {
         title    = $Title
         category = "LOGIN"
         tags     = @("LAPS", "local-admin", "Windows")
+        sections = @(
+            @{
+                id    = "host_info"
+                label = "Host Information"
+            }
+        )
         fields   = @(
             @{
                 id      = "username"
@@ -317,19 +335,11 @@ function New-OPItemPayload {
                     length        = $Script:PasswordLength
                     characterSets = @("LETTERS", "DIGITS", "SYMBOLS")
                 }
-            }
-        )
-        sections = @(
-            @{
-                id     = "host_info"
-                label  = "Host Information"
-                fields = @(
-                    @{ id = "hostname"; type = "STRING"; label = "Hostname"; value = $Script:Hostname }
-                    @{ id = "serial_number"; type = "STRING"; label = "Serial Number"; value = $Script:SerialNumber }
-                    @{ id = "os_version"; type = "STRING"; label = "OS Version"; value = $Script:OSVersion }
-                    @{ id = "last_rotation"; type = "STRING"; label = "Last Rotation"; value = $timestamp }
-                )
-            }
+            },
+            @{ id = "hostname"; type = "STRING"; label = "Hostname"; value = $Script:Hostname; section = @{ id = "host_info" } }
+            @{ id = "serial_number"; type = "STRING"; label = "Serial Number"; value = $Script:SerialNumber; section = @{ id = "host_info" } }
+            @{ id = "os_version"; type = "STRING"; label = "OS Version"; value = $Script:OSVersion; section = @{ id = "host_info" } }
+            @{ id = "last_rotation"; type = "STRING"; label = "Last Rotation"; value = $timestamp; section = @{ id = "host_info" } }
         )
     }
 
@@ -382,28 +392,21 @@ function Update-OPItem {
 
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
-    # Update password field to trigger generation
+    # Update fields: password generation, last rotation timestamp, and OS version
     foreach ($field in $existing.fields) {
-        if ($field.purpose -eq "PASSWORD") {
-            $field.generate = $true
-            $field.recipe = @{
+        $fieldPurpose = if ($field.PSObject.Properties['purpose']) { $field.purpose } else { $null }
+        if ($fieldPurpose -eq "PASSWORD") {
+            $field | Add-Member -NotePropertyName "generate" -NotePropertyValue $true -Force
+            $field | Add-Member -NotePropertyName "recipe" -NotePropertyValue @{
                 length        = $Script:PasswordLength
                 characterSets = @("LETTERS", "DIGITS", "SYMBOLS")
-            }
+            } -Force
         }
-    }
-
-    # Update last rotation timestamp in sections
-    foreach ($section in $existing.sections) {
-        if ($section.id -eq "host_info") {
-            foreach ($field in $section.fields) {
-                if ($field.id -eq "last_rotation") {
-                    $field.value = $timestamp
-                }
-                elseif ($field.id -eq "os_version") {
-                    $field.value = $Script:OSVersion
-                }
-            }
+        elseif ($field.id -eq "last_rotation") {
+            $field.value = $timestamp
+        }
+        elseif ($field.id -eq "os_version") {
+            $field.value = $Script:OSVersion
         }
     }
 
@@ -438,7 +441,8 @@ function Get-PasswordFromResponse {
     $password = $null
 
     foreach ($field in $Response.fields) {
-        if ($field.purpose -eq "PASSWORD") {
+        $fieldPurpose = if ($field.PSObject.Properties['purpose']) { $field.purpose } else { $null }
+        if ($fieldPurpose -eq "PASSWORD") {
             $password = $field.value
             break
         }
@@ -675,7 +679,7 @@ function Invoke-RotationMode {
             $response = Update-OPItem -ItemId $itemId
         }
         catch {
-            Write-LogError -Component "LAPS" -Message "Failed to update 1Password entry"
+            Write-LogError -Component "LAPS" -Message "Failed to update 1Password entry: $($_.Exception.Message)"
             exit $Script:EXIT_NETWORK_ERROR
         }
     }

@@ -285,6 +285,12 @@ build_item_payload() {
             title: $title,
             category: "LOGIN",
             tags: ["LAPS", "local-admin", "macOS"],
+            sections: [
+                {
+                    id: "host_info",
+                    label: "Host Information"
+                }
+            ],
             fields: [
                 {
                     id: "username",
@@ -303,25 +309,37 @@ build_item_payload() {
                         length: $pw_length,
                         characterSets: ["LETTERS", "DIGITS", "SYMBOLS"]
                     }
-                }
-            ],
-            sections: [
+                },
                 {
-                    id: "host_info",
-                    label: "Host Information"
+                    id: "hostname",
+                    type: "STRING",
+                    label: "Hostname",
+                    value: $hostname,
+                    section: { id: "host_info" }
+                },
+                {
+                    id: "serial_number",
+                    type: "STRING",
+                    label: "Serial Number",
+                    value: $serial,
+                    section: { id: "host_info" }
+                },
+                {
+                    id: "os_version",
+                    type: "STRING",
+                    label: "OS Version",
+                    value: $os,
+                    section: { id: "host_info" }
+                },
+                {
+                    id: "last_rotation",
+                    type: "STRING",
+                    label: "Last Rotation",
+                    value: $timestamp,
+                    section: { id: "host_info" }
                 }
             ]
-        }' | jq \
-        --arg hostname "$HOSTNAME" \
-        --arg serial "$SERIAL_NUMBER" \
-        --arg os "$OS_VERSION" \
-        --arg timestamp "$timestamp" \
-        '.sections[0].fields = [
-            { id: "hostname", type: "STRING", label: "Hostname", value: $hostname },
-            { id: "serial_number", type: "STRING", label: "Serial Number", value: $serial },
-            { id: "os_version", type: "STRING", label: "OS Version", value: $os },
-            { id: "last_rotation", type: "STRING", label: "Last Rotation", value: $timestamp }
-        ]')
+        }')
 
     echo "$payload"
 }
@@ -378,16 +396,8 @@ op_update_item() {
                     length: $pw_length,
                     characterSets: ["LETTERS", "DIGITS", "SYMBOLS"]
                 }
-            else . end
-        ] |
-        # Update last rotation timestamp in sections
-        .sections = [.sections[] |
-            if .id == "host_info" then
-                .fields = [.fields[] |
-                    if .id == "last_rotation" then .value = $timestamp
-                    elif .id == "os_version" then .value = $os
-                    else . end
-                ]
+            elif .id == "last_rotation" then .value = $timestamp
+            elif .id == "os_version" then .value = $os
             else . end
         ]
         ')
