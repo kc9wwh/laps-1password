@@ -36,7 +36,7 @@ echo ""
 # Wait for 1Password Connect to be ready
 echo "Waiting for 1Password Connect..."
 for i in {1..30}; do
-    if curl -s "${OP_CONNECT_HOST}/health" > /dev/null 2>&1; then
+    if curl -s "${FLEET_SECRET_OP_CONNECT_HOST}/health" > /dev/null 2>&1; then
         echo "1Password Connect is ready"
         break
     fi

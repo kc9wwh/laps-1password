@@ -55,16 +55,16 @@ Create `.env` file:
 
 ```bash
 # 1Password Connect host
-export OP_CONNECT_HOST="http://localhost:8081"
+export FLEET_SECRET_OP_CONNECT_HOST="http://localhost:8081"
 
 # 1Password Connect Token (generate from 1Password)
-export OP_CONNECT_TOKEN=xxxxxx
+export FLEET_SECRET_OP_CONNECT_TOKEN=xxxxxx
 
 # Vault ID for LAPS testing
-export OP_VAULT_ID=xxxxx
+export FLEET_SECRET_OP_VAULT_ID=xxxxx
 
 # Optional: Custom admin username for testing
-export LAPS_ADMIN_USERNAME=laps-admin
+export FLEET_SECRET_LAPS_ADMIN_USERNAME=laps-admin
 ```
 
 ## 2. Starting the Test Environment
@@ -155,13 +155,13 @@ docker exec -it laps-test-pwsh pwsh -File /tests/test-pwsh.ps1
 
 ```bash
 # Set up environment
-export OP_CONNECT_HOST="http://localhost:8081"
-export OP_CONNECT_TOKEN="your-token"
-export OP_VAULT_ID="your-vault-id"
-export LAPS_DEBUG=1
+export FLEET_SECRET_OP_CONNECT_HOST="http://localhost:8081"
+export FLEET_SECRET_OP_CONNECT_TOKEN="your-token"
+export FLEET_SECRET_OP_VAULT_ID="your-vault-id"
+export FLEET_SECRET_LAPS_DEBUG=1
 
 # Test 1: Dry run first
-LAPS_DRY_RUN=1 sudo ./laps-macos.sh
+FLEET_SECRET_LAPS_DRY_RUN=1 sudo ./laps-macos.sh
 
 # Test 2: Create account (first run)
 sudo ./laps-macos.sh
@@ -192,17 +192,17 @@ sudo ./laps-macos.sh
 
 ```powershell
 # Set up environment
-$env:OP_CONNECT_HOST = "http://localhost:8080"
-$env:OP_CONNECT_TOKEN = "your-token"
-$env:OP_VAULT_ID = "your-vault-id"
-$env:LAPS_DEBUG = "1"
+$env:FLEET_SECRET_OP_CONNECT_HOST = "http://localhost:8080"
+$env:FLEET_SECRET_OP_CONNECT_TOKEN = "your-token"
+$env:FLEET_SECRET_OP_VAULT_ID = "your-vault-id"
+$env:FLEET_SECRET_LAPS_DEBUG = "1"
 
 # Test 1: Dry run first
-$env:LAPS_DRY_RUN = "1"
+$env:FLEET_SECRET_LAPS_DRY_RUN = "1"
 .\laps-windows.ps1
 
 # Test 2: Create account (first run)
-$env:LAPS_DRY_RUN = "0"
+$env:FLEET_SECRET_LAPS_DRY_RUN = "0"
 .\laps-windows.ps1
 
 # Verify:
@@ -255,8 +255,8 @@ jobs:
       - name: Set up test environment
         run: |
           cd laps-testing
-          echo "OP_CONNECT_TOKEN=${{ secrets.OP_CONNECT_TOKEN }}" >> .env
-          echo "OP_VAULT_ID=${{ secrets.OP_VAULT_ID }}" >> .env
+          echo "FLEET_SECRET_OP_CONNECT_TOKEN=${{ secrets.FLEET_SECRET_OP_CONNECT_TOKEN }}" >> .env
+          echo "FLEET_SECRET_OP_VAULT_ID=${{ secrets.FLEET_SECRET_OP_VAULT_ID }}" >> .env
       
       - name: Copy 1Password credentials
         run: |

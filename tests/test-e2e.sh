@@ -6,7 +6,7 @@ set -euo pipefail
 PASS=0
 FAIL=0
 TEST_HOSTNAME="E2E-TEST-$(date +%s)"
-TEST_ADMIN_USER="${LAPS_ADMIN_USERNAME:-local-admin}"
+TEST_ADMIN_USER="${FLEET_SECRET_LAPS_ADMIN_USERNAME:-local-admin}"
 CREATED_ITEM_ID=""
 CREATED_ITEM_RESPONSE=""
 
@@ -19,8 +19,8 @@ cleanup() {
     echo "Cleaning up test data..."
     if [[ -n "$CREATED_ITEM_ID" ]]; then
         curl -s -o /dev/null -X DELETE \
-            -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
-            "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}/items/${CREATED_ITEM_ID}" || true
+            -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
+            "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items/${CREATED_ITEM_ID}" || true
         echo "Deleted test item: $CREATED_ITEM_ID"
     fi
 }
@@ -31,8 +31,8 @@ search_item() {
     local title="$1"
     local encoded_title=$(printf '%s' "$title" | jq -sRr @uri)
     curl -s \
-        -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
-        "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}/items?filter=title%20eq%20%22${encoded_title}%22"
+        -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items?filter=title%20eq%20%22${encoded_title}%22"
 }
 
 # Test: Full setup workflow (simulated)
@@ -42,7 +42,7 @@ test_setup_workflow() {
     # Simulate what the script does: create item with password generation
     local payload=$(cat <<EOF
 {
-    "vault": {"id": "${OP_VAULT_ID}"},
+    "vault": {"id": "${FLEET_SECRET_OP_VAULT_ID}"},
     "title": "${TEST_HOSTNAME}",
     "category": "LOGIN",
     "tags": ["LAPS", "local-admin", "test"],
@@ -64,10 +64,10 @@ EOF
 )
 
     CREATED_ITEM_RESPONSE=$(curl -s -X POST \
-        -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
+        -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
         -H "Content-Type: application/json" \
         -d "$payload" \
-        "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}/items")
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items")
 
     CREATED_ITEM_ID=$(echo "$CREATED_ITEM_RESPONSE" | jq -r '.id // empty')
     local password=$(echo "$CREATED_ITEM_RESPONSE" | jq -r '.fields[] | select(.purpose == "PASSWORD") | .value // empty')
@@ -134,10 +134,10 @@ test_rotation_workflow() {
     ')
 
     response=$(curl -s -X PUT \
-        -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
+        -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
         -H "Content-Type: application/json" \
         -d "$updated" \
-        "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}/items/${CREATED_ITEM_ID}")
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items/${CREATED_ITEM_ID}")
 
     # Check for error response
     if echo "$response" | jq -e '.status' > /dev/null 2>&1; then
@@ -164,8 +164,8 @@ test_item_structure() {
     fi
 
     item=$(curl -s \
-        -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
-        "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}/items/${CREATED_ITEM_ID}")
+        -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items/${CREATED_ITEM_ID}")
 
     # Check category
     category=$(echo "$item" | jq -r '.category')

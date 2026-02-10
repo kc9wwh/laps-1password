@@ -15,26 +15,26 @@ log_pass() { echo "  ✓ PASS: $1"; ((PASS++)) || true; }
 log_fail() { echo "  ✗ FAIL: $1"; ((FAIL++)) || true; }
 
 # Ensure dry run mode
-export LAPS_DRY_RUN=1
-export LAPS_DEBUG=1
+export FLEET_SECRET_LAPS_DRY_RUN=1
+export FLEET_SECRET_LAPS_DEBUG=1
 
 # Test: Script validates missing config
 test_missing_config() {
     log_test "Missing Configuration Detection"
 
     # Temporarily unset required var
-    local saved_token="$OP_CONNECT_TOKEN"
-    unset OP_CONNECT_TOKEN
+    local saved_token="$FLEET_SECRET_OP_CONNECT_TOKEN"
+    unset FLEET_SECRET_OP_CONNECT_TOKEN
 
     output=$("$LAPS_SCRIPT" 2>&1 || true)
     exit_code=$?
 
-    export OP_CONNECT_TOKEN="$saved_token"
+    export FLEET_SECRET_OP_CONNECT_TOKEN="$saved_token"
 
     if [[ "$output" == *"Missing required environment variables"* ]] || [[ $exit_code -eq 2 ]]; then
         log_pass "Missing config detected correctly"
     else
-        log_fail "Should have detected missing OP_CONNECT_TOKEN"
+        log_fail "Should have detected missing FLEET_SECRET_OP_CONNECT_TOKEN"
     fi
 }
 

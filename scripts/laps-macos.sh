@@ -6,14 +6,14 @@
 # Passwords are generated server-side by 1Password Connect API.
 #
 # Required environment variables:
-#   OP_CONNECT_HOST  - 1Password Connect server URL
-#   OP_CONNECT_TOKEN - API access token
-#   OP_VAULT_ID      - Target vault UUID
+#   FLEET_SECRET_OP_CONNECT_HOST  - 1Password Connect server URL
+#   FLEET_SECRET_OP_CONNECT_TOKEN - API access token
+#   FLEET_SECRET_OP_VAULT_ID      - Target vault UUID
 #
 # Optional environment variables:
-#   LAPS_ADMIN_USERNAME - Local admin account name (default: laps-admin)
-#   LAPS_DEBUG          - Enable debug logging (default: 0)
-#   LAPS_DRY_RUN        - Test mode, no changes made (default: 0)
+#   FLEET_SECRET_LAPS_ADMIN_USERNAME - Local admin account name (default: laps-admin)
+#   FLEET_SECRET_LAPS_DEBUG          - Enable debug logging (default: 0)
+#   FLEET_SECRET_LAPS_DRY_RUN        - Test mode, no changes made (default: 0)
 
 set -euo pipefail
 
@@ -43,9 +43,9 @@ readonly RETRY_DELAYS=(0 2 4 8)
 #=============================================================================
 # RUNTIME VARIABLES
 #=============================================================================
-ADMIN_USER="${LAPS_ADMIN_USERNAME:-$DEFAULT_ADMIN_USER}"
-DEBUG="${LAPS_DEBUG:-0}"
-DRY_RUN="${LAPS_DRY_RUN:-0}"
+ADMIN_USER="${FLEET_SECRET_LAPS_ADMIN_USERNAME:-$DEFAULT_ADMIN_USER}"
+DEBUG="${FLEET_SECRET_LAPS_DEBUG:-0}"
+DRY_RUN="${FLEET_SECRET_LAPS_DRY_RUN:-0}"
 
 #=============================================================================
 # LOGGING FUNCTIONS
@@ -95,16 +95,16 @@ validate_config() {
 
     local missing=()
 
-    if [[ -z "${OP_CONNECT_HOST:-}" ]]; then
-        missing+=("OP_CONNECT_HOST")
+    if [[ -z "${FLEET_SECRET_OP_CONNECT_HOST:-}" ]]; then
+        missing+=("FLEET_SECRET_OP_CONNECT_HOST")
     fi
 
-    if [[ -z "${OP_CONNECT_TOKEN:-}" ]]; then
-        missing+=("OP_CONNECT_TOKEN")
+    if [[ -z "${FLEET_SECRET_OP_CONNECT_TOKEN:-}" ]]; then
+        missing+=("FLEET_SECRET_OP_CONNECT_TOKEN")
     fi
 
-    if [[ -z "${OP_VAULT_ID:-}" ]]; then
-        missing+=("OP_VAULT_ID")
+    if [[ -z "${FLEET_SECRET_OP_VAULT_ID:-}" ]]; then
+        missing+=("FLEET_SECRET_OP_VAULT_ID")
     fi
 
     if [[ ${#missing[@]} -gt 0 ]]; then
@@ -112,8 +112,8 @@ validate_config() {
         exit $EXIT_CONFIG_ERROR
     fi
 
-    log_debug "CONFIG" "OP_CONNECT_HOST: $(mask_string "$OP_CONNECT_HOST" 20)"
-    log_debug "CONFIG" "OP_VAULT_ID: $(mask_string "$OP_VAULT_ID")"
+    log_debug "CONFIG" "FLEET_SECRET_OP_CONNECT_HOST: $(mask_string "$FLEET_SECRET_OP_CONNECT_HOST" 20)"
+    log_debug "CONFIG" "FLEET_SECRET_OP_VAULT_ID: $(mask_string "$FLEET_SECRET_OP_VAULT_ID")"
     log_info "CONFIG" "Admin username: $ADMIN_USER"
     log_info "CONFIG" "Configuration validated successfully"
 }
@@ -177,7 +177,7 @@ op_api_request() {
             -s
             -w "\n%{http_code}"
             -X "$method"
-            -H "Authorization: Bearer $OP_CONNECT_TOKEN"
+            -H "Authorization: Bearer $FLEET_SECRET_OP_CONNECT_TOKEN"
             -H "Content-Type: application/json"
         )
 
@@ -186,7 +186,7 @@ op_api_request() {
         fi
 
         local full_response
-        full_response=$(curl "${curl_args[@]}" "${OP_CONNECT_HOST}${endpoint}" 2>&1) || true
+        full_response=$(curl "${curl_args[@]}" "${FLEET_SECRET_OP_CONNECT_HOST}${endpoint}" 2>&1) || true
 
         # Extract HTTP code from last line
         http_code=$(echo "$full_response" | tail -n1)
@@ -244,7 +244,7 @@ op_search_item() {
     encoded_title=$(printf '%s' "$title" | jq -sRr @uri)
 
     local response
-    response=$(op_api_request "GET" "/v1/vaults/${OP_VAULT_ID}/items?filter=title%20eq%20%22${encoded_title}%22") || return 1
+    response=$(op_api_request "GET" "/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items?filter=title%20eq%20%22${encoded_title}%22") || return 1
 
     if [[ -z "$response" || "$response" == "[]" ]]; then
         log_info "1PASSWORD" "No existing entry found"
@@ -272,7 +272,7 @@ build_item_payload() {
 
     local payload
     payload=$(jq -n \
-        --arg vault_id "$OP_VAULT_ID" \
+        --arg vault_id "$FLEET_SECRET_OP_VAULT_ID" \
         --arg title "$title" \
         --arg username "$ADMIN_USER" \
         --arg hostname "$HOSTNAME" \
@@ -358,7 +358,7 @@ op_create_item() {
     fi
 
     local response
-    response=$(op_api_request "POST" "/v1/vaults/${OP_VAULT_ID}/items" "$payload") || {
+    response=$(op_api_request "POST" "/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items" "$payload") || {
         log_error "1PASSWORD" "Failed to create item"
         return 1
     }
@@ -373,7 +373,7 @@ op_update_item() {
 
     # First, get the existing item to preserve structure
     local existing
-    existing=$(op_api_request "GET" "/v1/vaults/${OP_VAULT_ID}/items/${item_id}") || {
+    existing=$(op_api_request "GET" "/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items/${item_id}") || {
         log_error "1PASSWORD" "Failed to retrieve existing item"
         return 1
     }
@@ -409,7 +409,7 @@ op_update_item() {
     fi
 
     local response
-    response=$(op_api_request "PUT" "/v1/vaults/${OP_VAULT_ID}/items/${item_id}" "$payload") || {
+    response=$(op_api_request "PUT" "/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items/${item_id}" "$payload") || {
         log_error "1PASSWORD" "Failed to update item"
         return 1
     }

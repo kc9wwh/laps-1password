@@ -23,7 +23,7 @@ log_fail() {
 # Test 1: Health Check
 test_health_check() {
     log_test "Health Check"
-    response=$(curl -s -o /dev/null -w "%{http_code}" "${OP_CONNECT_HOST}/health")
+    response=$(curl -s -o /dev/null -w "%{http_code}" "${FLEET_SECRET_OP_CONNECT_HOST}/health")
     if [[ "$response" == "200" ]]; then
         log_pass "Health endpoint returns 200"
     else
@@ -35,8 +35,8 @@ test_health_check() {
 test_authentication() {
     log_test "Authentication"
     response=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
-        "${OP_CONNECT_HOST}/v1/vaults")
+        -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults")
     if [[ "$response" == "200" ]]; then
         log_pass "Authentication successful"
     else
@@ -48,8 +48,8 @@ test_authentication() {
 test_vault_access() {
     log_test "Vault Access"
     response=$(curl -s \
-        -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
-        "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}")
+        -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}")
 
     vault_name=$(echo "$response" | jq -r '.name // empty')
     if [[ -n "$vault_name" ]]; then
@@ -64,7 +64,7 @@ test_invalid_token() {
     log_test "Invalid Token Rejection"
     response=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "Authorization: Bearer invalid-token" \
-        "${OP_CONNECT_HOST}/v1/vaults")
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults")
     if [[ "$response" == "401" ]]; then
         log_pass "Invalid token correctly rejected"
     else

@@ -5,7 +5,7 @@ set -euo pipefail
 
 PASS=0
 FAIL=0
-TEST_ADMIN_USER="${LAPS_ADMIN_USERNAME:-laps-admin}"
+TEST_ADMIN_USER="${FLEET_SECRET_LAPS_ADMIN_USERNAME:-laps-admin}"
 TEST_ITEM_ID=""
 TEST_ITEM_RESPONSE=""
 
@@ -17,8 +17,8 @@ cleanup() {
     if [[ -n "$TEST_ITEM_ID" ]]; then
         echo "Cleaning up test item: $TEST_ITEM_ID"
         curl -s -o /dev/null -X DELETE \
-            -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
-            "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}/items/${TEST_ITEM_ID}" || true
+            -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
+            "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items/${TEST_ITEM_ID}" || true
     fi
 }
 trap cleanup EXIT
@@ -29,7 +29,7 @@ test_password_generation() {
 
     local payload=$(cat <<EOF
 {
-    "vault": {"id": "${OP_VAULT_ID}"},
+    "vault": {"id": "${FLEET_SECRET_OP_VAULT_ID}"},
     "title": "TEST-LAPS-$(date +%s)",
     "category": "LOGIN",
     "fields": [
@@ -57,10 +57,10 @@ EOF
 )
 
     TEST_ITEM_RESPONSE=$(curl -s -X POST \
-        -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
+        -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
         -H "Content-Type: application/json" \
         -d "$payload" \
-        "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}/items")
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items")
 
     TEST_ITEM_ID=$(echo "$TEST_ITEM_RESPONSE" | jq -r '.id // empty')
     password=$(echo "$TEST_ITEM_RESPONSE" | jq -r '.fields[] | select(.purpose == "PASSWORD") | .value // empty')
@@ -139,10 +139,10 @@ test_password_rotation() {
     ')
 
     response=$(curl -s -X PUT \
-        -H "Authorization: Bearer ${OP_CONNECT_TOKEN}" \
+        -H "Authorization: Bearer ${FLEET_SECRET_OP_CONNECT_TOKEN}" \
         -H "Content-Type: application/json" \
         -d "$updated" \
-        "${OP_CONNECT_HOST}/v1/vaults/${OP_VAULT_ID}/items/${TEST_ITEM_ID}")
+        "${FLEET_SECRET_OP_CONNECT_HOST}/v1/vaults/${FLEET_SECRET_OP_VAULT_ID}/items/${TEST_ITEM_ID}")
 
     new_password=$(echo "$response" | jq -r '.fields[] | select(.purpose == "PASSWORD") | .value')
 
