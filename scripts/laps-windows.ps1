@@ -48,11 +48,21 @@ $Script:MaxRetries = 4
 $Script:RetryDelays = @(0, 2, 4, 8)
 
 #=============================================================================
+# FLEET SECRET VARIABLES (substituted server-side by Fleet before execution)
+#=============================================================================
+$Script:FleetSecretOPConnectHost = "$FLEET_SECRET_OP_CONNECT_HOST"
+$Script:FleetSecretOPConnectToken = "$FLEET_SECRET_OP_CONNECT_TOKEN"
+$Script:FleetSecretOPVaultId = "$FLEET_SECRET_OP_VAULT_ID"
+$Script:FleetSecretLapsAdminUsername = "$FLEET_SECRET_LAPS_ADMIN_USERNAME"
+$Script:FleetSecretLapsDebug = "$FLEET_SECRET_LAPS_DEBUG"
+$Script:FleetSecretLapsDryRun = "$FLEET_SECRET_LAPS_DRY_RUN"
+
+#=============================================================================
 # RUNTIME VARIABLES
 #=============================================================================
-$Script:AdminUser = if ($env:FLEET_SECRET_LAPS_ADMIN_USERNAME) { $env:FLEET_SECRET_LAPS_ADMIN_USERNAME } else { $Script:DefaultAdminUser }
-$Script:Debug = if ($env:FLEET_SECRET_LAPS_DEBUG -eq "1") { $true } else { $false }
-$Script:DryRun = if ($env:FLEET_SECRET_LAPS_DRY_RUN -eq "1") { $true } else { $false }
+$Script:AdminUser = if ($Script:FleetSecretLapsAdminUsername) { $Script:FleetSecretLapsAdminUsername } else { $Script:DefaultAdminUser }
+$Script:Debug = if ($Script:FleetSecretLapsDebug -eq "1") { $true } else { $false }
+$Script:DryRun = if ($Script:FleetSecretLapsDryRun -eq "1") { $true } else { $false }
 
 # Host information (populated later)
 $Script:Hostname = $null
@@ -119,15 +129,15 @@ function Test-Configuration {
 
     $missing = @()
 
-    if (-not $env:FLEET_SECRET_OP_CONNECT_HOST) {
+    if (-not $Script:FleetSecretOPConnectHost) {
         $missing += "FLEET_SECRET_OP_CONNECT_HOST"
     }
 
-    if (-not $env:FLEET_SECRET_OP_CONNECT_TOKEN) {
+    if (-not $Script:FleetSecretOPConnectToken) {
         $missing += "FLEET_SECRET_OP_CONNECT_TOKEN"
     }
 
-    if (-not $env:FLEET_SECRET_OP_VAULT_ID) {
+    if (-not $Script:FleetSecretOPVaultId) {
         $missing += "FLEET_SECRET_OP_VAULT_ID"
     }
 
@@ -136,8 +146,8 @@ function Test-Configuration {
         exit $Script:EXIT_CONFIG_ERROR
     }
 
-    Write-LogDebug -Component "CONFIG" -Message "FLEET_SECRET_OP_CONNECT_HOST: $(Get-MaskedString -String $env:FLEET_SECRET_OP_CONNECT_HOST -VisibleChars 20)"
-    Write-LogDebug -Component "CONFIG" -Message "FLEET_SECRET_OP_VAULT_ID: $(Get-MaskedString -String $env:FLEET_SECRET_OP_VAULT_ID)"
+    Write-LogDebug -Component "CONFIG" -Message "FLEET_SECRET_OP_CONNECT_HOST: $(Get-MaskedString -String $Script:FleetSecretOPConnectHost -VisibleChars 20)"
+    Write-LogDebug -Component "CONFIG" -Message "FLEET_SECRET_OP_VAULT_ID: $(Get-MaskedString -String $Script:FleetSecretOPVaultId)"
     Write-LogInfo -Component "CONFIG" -Message "Admin username: $Script:AdminUser"
     Write-LogInfo -Component "CONFIG" -Message "Configuration validated successfully"
 }
@@ -187,11 +197,11 @@ function Invoke-OPApiRequest {
         Write-LogDebug -Component "1PASSWORD" -Message "API request: $Method $Endpoint (attempt $($attempt + 1))"
 
         $headers = @{
-            "Authorization" = "Bearer $env:FLEET_SECRET_OP_CONNECT_TOKEN"
+            "Authorization" = "Bearer $Script:FleetSecretOPConnectToken"
             "Content-Type"  = "application/json"
         }
 
-        $uri = "$env:FLEET_SECRET_OP_CONNECT_HOST$Endpoint"
+        $uri = "$($Script:FleetSecretOPConnectHost)$Endpoint"
 
         try {
             $params = @{
@@ -275,7 +285,7 @@ function Find-OPItem {
 
     # URL encode the title for the filter
     $encodedTitle = [System.Uri]::EscapeDataString($Title)
-    $endpoint = "/v1/vaults/$env:FLEET_SECRET_OP_VAULT_ID/items?filter=title%20eq%20%22$encodedTitle%22"
+    $endpoint = "/v1/vaults/$Script:FleetSecretOPVaultId/items?filter=title%20eq%20%22$encodedTitle%22"
 
     try {
         $response = @(Invoke-OPApiRequest -Method "GET" -Endpoint $endpoint)
@@ -307,7 +317,7 @@ function New-OPItemPayload {
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 
     $payload = @{
-        vault    = @{ id = $env:FLEET_SECRET_OP_VAULT_ID }
+        vault    = @{ id = $Script:FleetSecretOPVaultId }
         title    = $Title
         category = "LOGIN"
         tags     = @("LAPS", "local-admin", "Windows")
@@ -363,7 +373,7 @@ function New-OPItem {
     }
 
     try {
-        $response = Invoke-OPApiRequest -Method "POST" -Endpoint "/v1/vaults/$env:FLEET_SECRET_OP_VAULT_ID/items" -Body $payload
+        $response = Invoke-OPApiRequest -Method "POST" -Endpoint "/v1/vaults/$Script:FleetSecretOPVaultId/items" -Body $payload
         Write-LogInfo -Component "1PASSWORD" -Message "Successfully created entry"
         return $response
     }
@@ -383,7 +393,7 @@ function Update-OPItem {
 
     # First, get the existing item to preserve structure
     try {
-        $existing = Invoke-OPApiRequest -Method "GET" -Endpoint "/v1/vaults/$env:FLEET_SECRET_OP_VAULT_ID/items/$ItemId"
+        $existing = Invoke-OPApiRequest -Method "GET" -Endpoint "/v1/vaults/$Script:FleetSecretOPVaultId/items/$ItemId"
     }
     catch {
         Write-LogError -Component "1PASSWORD" -Message "Failed to retrieve existing item"
@@ -422,7 +432,7 @@ function Update-OPItem {
     }
 
     try {
-        $response = Invoke-OPApiRequest -Method "PUT" -Endpoint "/v1/vaults/$env:FLEET_SECRET_OP_VAULT_ID/items/$ItemId" -Body $payload
+        $response = Invoke-OPApiRequest -Method "PUT" -Endpoint "/v1/vaults/$Script:FleetSecretOPVaultId/items/$ItemId" -Body $payload
         Write-LogInfo -Component "1PASSWORD" -Message "Successfully updated entry"
         return $response
     }

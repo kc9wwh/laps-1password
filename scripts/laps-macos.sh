@@ -43,9 +43,12 @@ readonly RETRY_DELAYS=(0 2 4 8)
 #=============================================================================
 # RUNTIME VARIABLES
 #=============================================================================
-ADMIN_USER="${FLEET_SECRET_LAPS_ADMIN_USERNAME:-$DEFAULT_ADMIN_USER}"
-DEBUG="${FLEET_SECRET_LAPS_DEBUG:-0}"
-DRY_RUN="${FLEET_SECRET_LAPS_DRY_RUN:-0}"
+ADMIN_USER="${FLEET_SECRET_LAPS_ADMIN_USERNAME}"
+[[ -z "$ADMIN_USER" ]] && ADMIN_USER="$DEFAULT_ADMIN_USER"
+DEBUG="${FLEET_SECRET_LAPS_DEBUG}"
+[[ -z "$DEBUG" ]] && DEBUG="0"
+DRY_RUN="${FLEET_SECRET_LAPS_DRY_RUN}"
+[[ -z "$DRY_RUN" ]] && DRY_RUN="0"
 
 #=============================================================================
 # LOGGING FUNCTIONS
@@ -95,15 +98,15 @@ validate_config() {
 
     local missing=()
 
-    if [[ -z "${FLEET_SECRET_OP_CONNECT_HOST:-}" ]]; then
+    if [[ -z "$FLEET_SECRET_OP_CONNECT_HOST" ]]; then
         missing+=("FLEET_SECRET_OP_CONNECT_HOST")
     fi
 
-    if [[ -z "${FLEET_SECRET_OP_CONNECT_TOKEN:-}" ]]; then
+    if [[ -z "$FLEET_SECRET_OP_CONNECT_TOKEN" ]]; then
         missing+=("FLEET_SECRET_OP_CONNECT_TOKEN")
     fi
 
-    if [[ -z "${FLEET_SECRET_OP_VAULT_ID:-}" ]]; then
+    if [[ -z "$FLEET_SECRET_OP_VAULT_ID" ]]; then
         missing+=("FLEET_SECRET_OP_VAULT_ID")
     fi
 
