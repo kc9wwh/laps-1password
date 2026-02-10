@@ -51,6 +51,9 @@ volumes:
 
 ### 1.3 Environment Configuration
 
+All variables use the `FLEET_SECRET_` prefix so they are compatible with Fleet's
+server-side secret substitution. For local testing, set them as environment variables.
+
 Create `.env` file:
 
 ```bash
@@ -153,6 +156,9 @@ docker exec -it laps-test-pwsh pwsh -File /tests/test-pwsh.ps1
 
 ### 5.1 macOS Testing (Requires Real macOS)
 
+When deployed via Fleet, variables are substituted server-side. For local testing,
+set them as environment variables and use `sudo -E` to preserve them.
+
 ```bash
 # Set up environment
 export FLEET_SECRET_OP_CONNECT_HOST="http://localhost:8081"
@@ -161,10 +167,10 @@ export FLEET_SECRET_OP_VAULT_ID="your-vault-id"
 export FLEET_SECRET_LAPS_DEBUG=1
 
 # Test 1: Dry run first
-FLEET_SECRET_LAPS_DRY_RUN=1 sudo ./laps-macos.sh
+FLEET_SECRET_LAPS_DRY_RUN=1 sudo -E ./laps-macos.sh
 
 # Test 2: Create account (first run)
-sudo ./laps-macos.sh
+sudo -E ./laps-macos.sh
 
 # Verify:
 # [ ] Account created
@@ -180,7 +186,7 @@ defaults read /Library/Preferences/com.apple.loginwindow HiddenUsersList
 # Check 1Password vault
 
 # Test 3: Rotation (second run)
-sudo ./laps-macos.sh
+sudo -E ./laps-macos.sh
 
 # Verify:
 # [ ] Password changed in 1Password
@@ -189,6 +195,9 @@ sudo ./laps-macos.sh
 ```
 
 ### 5.2 Windows Testing (Requires Real Windows)
+
+When deployed via Fleet, variables are substituted server-side. For local testing,
+set them as environment variables.
 
 ```powershell
 # Set up environment

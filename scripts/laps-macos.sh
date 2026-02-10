@@ -5,15 +5,18 @@
 # Creates and manages a hidden local admin account with password stored in 1Password.
 # Passwords are generated server-side by 1Password Connect API.
 #
-# Required environment variables:
+# Required variables (set as Fleet secrets or environment variables):
 #   FLEET_SECRET_OP_CONNECT_HOST  - 1Password Connect server URL
 #   FLEET_SECRET_OP_CONNECT_TOKEN - API access token
 #   FLEET_SECRET_OP_VAULT_ID      - Target vault UUID
 #
-# Optional environment variables:
+# Optional variables:
 #   FLEET_SECRET_LAPS_ADMIN_USERNAME - Local admin account name (default: laps-admin)
 #   FLEET_SECRET_LAPS_DEBUG          - Enable debug logging (default: 0)
 #   FLEET_SECRET_LAPS_DRY_RUN        - Test mode, no changes made (default: 0)
+#
+# When deployed via Fleet, these are substituted server-side before execution.
+# For local testing, set them as environment variables.
 
 set -euo pipefail
 
@@ -23,7 +26,7 @@ set -euo pipefail
 readonly SCRIPT_VERSION="1.0.0"
 readonly SCRIPT_NAME="laps-macos"
 
-# Defaults (can be overridden by environment variables)
+# Defaults (can be overridden by FLEET_SECRET_ variables)
 readonly DEFAULT_ADMIN_USER="laps-admin"
 readonly DEFAULT_ADMIN_REALNAME="LAPS Admin"
 readonly PASSWORD_LENGTH=28

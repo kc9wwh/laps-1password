@@ -9,15 +9,19 @@
 .VERSION
     1.0.0
 .NOTES
-    Required environment variables:
+    Required variables (set as Fleet secrets or environment variables):
         FLEET_SECRET_OP_CONNECT_HOST  - 1Password Connect server URL
         FLEET_SECRET_OP_CONNECT_TOKEN - API access token
         FLEET_SECRET_OP_VAULT_ID      - Target vault UUID
 
-    Optional environment variables:
+    Optional variables:
         FLEET_SECRET_LAPS_ADMIN_USERNAME - Local admin account name (default: laps-admin)
         FLEET_SECRET_LAPS_DEBUG          - Enable debug logging (default: 0)
         FLEET_SECRET_LAPS_DRY_RUN        - Test mode, no changes made (default: 0)
+
+    When deployed via Fleet, these are substituted server-side before execution.
+    For local testing, the script reads from environment variables ($env:FLEET_SECRET_*)
+    as a fallback when the literal placeholders are not substituted.
 #>
 
 # Set strict mode for better error handling
@@ -30,7 +34,7 @@ $ErrorActionPreference = "Stop"
 $Script:Version = "1.0.0"
 $Script:ScriptName = "laps-windows"
 
-# Defaults (can be overridden by environment variables)
+# Defaults (can be overridden by FLEET_SECRET_ variables)
 $Script:DefaultAdminUser = "laps-admin"
 $Script:DefaultAdminDescription = "LAPS Managed Admin Account"
 $Script:PasswordLength = 28
@@ -49,6 +53,8 @@ $Script:RetryDelays = @(0, 2, 4, 8)
 
 #=============================================================================
 # FLEET SECRET VARIABLES (substituted server-side by Fleet before execution)
+# When run locally, these remain as literal strings and the script falls back
+# to environment variables ($env:FLEET_SECRET_*).
 #=============================================================================
 $Script:FleetSecretOPConnectHost = "$FLEET_SECRET_OP_CONNECT_HOST"
 $Script:FleetSecretOPConnectToken = "$FLEET_SECRET_OP_CONNECT_TOKEN"
@@ -56,6 +62,14 @@ $Script:FleetSecretOPVaultId = "$FLEET_SECRET_OP_VAULT_ID"
 $Script:FleetSecretLapsAdminUsername = "$FLEET_SECRET_LAPS_ADMIN_USERNAME"
 $Script:FleetSecretLapsDebug = "$FLEET_SECRET_LAPS_DEBUG"
 $Script:FleetSecretLapsDryRun = "$FLEET_SECRET_LAPS_DRY_RUN"
+
+# Fall back to environment variables for local testing
+if ($Script:FleetSecretOPConnectHost -eq '$FLEET_SECRET_OP_CONNECT_HOST') { $Script:FleetSecretOPConnectHost = $env:FLEET_SECRET_OP_CONNECT_HOST }
+if ($Script:FleetSecretOPConnectToken -eq '$FLEET_SECRET_OP_CONNECT_TOKEN') { $Script:FleetSecretOPConnectToken = $env:FLEET_SECRET_OP_CONNECT_TOKEN }
+if ($Script:FleetSecretOPVaultId -eq '$FLEET_SECRET_OP_VAULT_ID') { $Script:FleetSecretOPVaultId = $env:FLEET_SECRET_OP_VAULT_ID }
+if ($Script:FleetSecretLapsAdminUsername -eq '$FLEET_SECRET_LAPS_ADMIN_USERNAME') { $Script:FleetSecretLapsAdminUsername = $env:FLEET_SECRET_LAPS_ADMIN_USERNAME }
+if ($Script:FleetSecretLapsDebug -eq '$FLEET_SECRET_LAPS_DEBUG') { $Script:FleetSecretLapsDebug = $env:FLEET_SECRET_LAPS_DEBUG }
+if ($Script:FleetSecretLapsDryRun -eq '$FLEET_SECRET_LAPS_DRY_RUN') { $Script:FleetSecretLapsDryRun = $env:FLEET_SECRET_LAPS_DRY_RUN }
 
 #=============================================================================
 # RUNTIME VARIABLES
