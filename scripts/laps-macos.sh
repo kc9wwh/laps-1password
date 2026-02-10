@@ -1,6 +1,6 @@
 #!/bin/bash
 # LAPS Password Management for macOS
-# Version: 1.0.2
+# Version: 1.1.0
 #
 # Creates and manages a hidden local admin account with password stored in 1Password.
 # Passwords are generated server-side by 1Password Connect API.
@@ -23,7 +23,7 @@ set -euo pipefail
 #=============================================================================
 # CONFIGURATION
 #=============================================================================
-readonly SCRIPT_VERSION="1.0.0"
+readonly SCRIPT_VERSION="1.1.0"
 readonly SCRIPT_NAME="laps-macos"
 
 # Defaults (can be overridden by FLEET_SECRET_ variables)

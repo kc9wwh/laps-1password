@@ -7,7 +7,7 @@
     Creates and manages a hidden local admin account with password stored in 1Password.
     Passwords are generated server-side by 1Password Connect API.
 .VERSION
-    1.0.0
+    1.1.0
 .NOTES
     Required variables (set as Fleet secrets or environment variables):
         FLEET_SECRET_OP_CONNECT_HOST  - 1Password Connect server URL
@@ -19,9 +19,9 @@
         FLEET_SECRET_LAPS_DEBUG          - Enable debug logging (default: 0)
         FLEET_SECRET_LAPS_DRY_RUN        - Test mode, no changes made (default: 0)
 
-    When deployed via Fleet, these are substituted server-side before execution.
-    For local testing, the script reads from environment variables ($env:FLEET_SECRET_*)
-    as a fallback when the literal placeholders are not substituted.
+    When deployed via Fleet, FLEET_SECRET_ placeholders are replaced server-side
+    before the script reaches the host. For local testing, set environment variables
+    (e.g. $env:FLEET_SECRET_OP_CONNECT_HOST) before running the script.
 #>
 
 # Set strict mode for better error handling
@@ -31,7 +31,7 @@ $ErrorActionPreference = "Stop"
 #=============================================================================
 # CONFIGURATION
 #=============================================================================
-$Script:Version = "1.0.0"
+$Script:Version = "1.1.0"
 $Script:ScriptName = "laps-windows"
 
 # Defaults (can be overridden by FLEET_SECRET_ variables)
@@ -52,10 +52,18 @@ $Script:MaxRetries = 4
 $Script:RetryDelays = @(0, 2, 4, 8)
 
 #=============================================================================
-# FLEET SECRET VARIABLES (substituted server-side by Fleet before execution)
-# When run locally, these remain as literal strings and the script falls back
-# to environment variables ($env:FLEET_SECRET_*).
+# FLEET SECRET VARIABLES
+# When deployed via Fleet, FLEET_SECRET_ placeholders below are replaced
+# with actual values via server-side text substitution before the script
+# reaches the host. For local testing, set environment variables instead
+# (e.g. $env:FLEET_SECRET_OP_CONNECT_HOST = "http://localhost:8080").
+#
+# NOTE: Fleet substitution replaces ALL occurrences of FLEET_SECRET_ variables
+# in the script text regardless of quoting context — including comments.
+# Use $env:FLEET_SECRET_ (which Fleet ignores) as the fallback source.
 #=============================================================================
+# Primary: Fleet server-side substitution (double-quoted so Fleet can replace)
+# Fallback: environment variables for local testing (Fleet ignores $env: prefix)
 $Script:FleetSecretOPConnectHost = "$FLEET_SECRET_OP_CONNECT_HOST"
 $Script:FleetSecretOPConnectToken = "$FLEET_SECRET_OP_CONNECT_TOKEN"
 $Script:FleetSecretOPVaultId = "$FLEET_SECRET_OP_VAULT_ID"
@@ -63,13 +71,14 @@ $Script:FleetSecretLapsAdminUsername = "$FLEET_SECRET_LAPS_ADMIN_USERNAME"
 $Script:FleetSecretLapsDebug = "$FLEET_SECRET_LAPS_DEBUG"
 $Script:FleetSecretLapsDryRun = "$FLEET_SECRET_LAPS_DRY_RUN"
 
-# Fall back to environment variables for local testing
-if ($Script:FleetSecretOPConnectHost -eq '$FLEET_SECRET_OP_CONNECT_HOST') { $Script:FleetSecretOPConnectHost = $env:FLEET_SECRET_OP_CONNECT_HOST }
-if ($Script:FleetSecretOPConnectToken -eq '$FLEET_SECRET_OP_CONNECT_TOKEN') { $Script:FleetSecretOPConnectToken = $env:FLEET_SECRET_OP_CONNECT_TOKEN }
-if ($Script:FleetSecretOPVaultId -eq '$FLEET_SECRET_OP_VAULT_ID') { $Script:FleetSecretOPVaultId = $env:FLEET_SECRET_OP_VAULT_ID }
-if ($Script:FleetSecretLapsAdminUsername -eq '$FLEET_SECRET_LAPS_ADMIN_USERNAME') { $Script:FleetSecretLapsAdminUsername = $env:FLEET_SECRET_LAPS_ADMIN_USERNAME }
-if ($Script:FleetSecretLapsDebug -eq '$FLEET_SECRET_LAPS_DEBUG') { $Script:FleetSecretLapsDebug = $env:FLEET_SECRET_LAPS_DEBUG }
-if ($Script:FleetSecretLapsDryRun -eq '$FLEET_SECRET_LAPS_DRY_RUN') { $Script:FleetSecretLapsDryRun = $env:FLEET_SECRET_LAPS_DRY_RUN }
+# Fall back to environment variables if Fleet substitution did not occur
+# (i.e. the variable is still empty after PowerShell evaluated the unset placeholder as "")
+if (-not $Script:FleetSecretOPConnectHost) { $Script:FleetSecretOPConnectHost = $env:FLEET_SECRET_OP_CONNECT_HOST }
+if (-not $Script:FleetSecretOPConnectToken) { $Script:FleetSecretOPConnectToken = $env:FLEET_SECRET_OP_CONNECT_TOKEN }
+if (-not $Script:FleetSecretOPVaultId) { $Script:FleetSecretOPVaultId = $env:FLEET_SECRET_OP_VAULT_ID }
+if (-not $Script:FleetSecretLapsAdminUsername) { $Script:FleetSecretLapsAdminUsername = $env:FLEET_SECRET_LAPS_ADMIN_USERNAME }
+if (-not $Script:FleetSecretLapsDebug) { $Script:FleetSecretLapsDebug = $env:FLEET_SECRET_LAPS_DEBUG }
+if (-not $Script:FleetSecretLapsDryRun) { $Script:FleetSecretLapsDryRun = $env:FLEET_SECRET_LAPS_DRY_RUN }
 
 #=============================================================================
 # RUNTIME VARIABLES
