@@ -26,7 +26,7 @@ set -euo pipefail
 readonly SCRIPT_VERSION="1.1.0"
 readonly SCRIPT_NAME="laps-macos"
 
-# Defaults (can be overridden by FLEET_SECRET_ variables)
+# Defaults (can be overridden by Fleet secret variables)
 readonly DEFAULT_ADMIN_USER="laps-admin"
 readonly DEFAULT_ADMIN_REALNAME="LAPS Admin"
 readonly PASSWORD_LENGTH=28
@@ -46,12 +46,15 @@ readonly RETRY_DELAYS=(0 2 4 8)
 #=============================================================================
 # RUNTIME VARIABLES
 #=============================================================================
+# Optional vars may be unset locally; temporarily allow for fallback defaults.
+set +u
 ADMIN_USER="${FLEET_SECRET_LAPS_ADMIN_USERNAME}"
 [[ -z "$ADMIN_USER" ]] && ADMIN_USER="$DEFAULT_ADMIN_USER"
 DEBUG="${FLEET_SECRET_LAPS_DEBUG}"
 [[ -z "$DEBUG" ]] && DEBUG="0"
 DRY_RUN="${FLEET_SECRET_LAPS_DRY_RUN}"
 [[ -z "$DRY_RUN" ]] && DRY_RUN="0"
+set -u
 
 #=============================================================================
 # LOGGING FUNCTIONS
@@ -101,6 +104,10 @@ validate_config() {
 
     local missing=()
 
+    # Temporarily allow unset variables for validation checks.
+    # When deployed via Fleet, these are always substituted. Locally, they may be
+    # genuinely unset, which triggers set -u before the -z check can run.
+    set +u
     if [[ -z "$FLEET_SECRET_OP_CONNECT_HOST" ]]; then
         missing+=("FLEET_SECRET_OP_CONNECT_HOST")
     fi
@@ -112,6 +119,7 @@ validate_config() {
     if [[ -z "$FLEET_SECRET_OP_VAULT_ID" ]]; then
         missing+=("FLEET_SECRET_OP_VAULT_ID")
     fi
+    set -u
 
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "CONFIG" "Missing required environment variables: ${missing[*]}"
