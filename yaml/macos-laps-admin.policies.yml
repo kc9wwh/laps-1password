@@ -1,0 +1,12 @@
+- name: macOS - LAPS Admin
+  platform: darwin
+  description: This policy checks if the laps-admin account password has been rotated within the last 7 days.
+  resolution: Rotate LAPS admin password and sync with 1Password.
+  query: |
+    SELECT 1
+    FROM account_policy_data a
+    JOIN users u USING (uid)
+    WHERE u.username = 'laps-admin'
+      AND CAST((strftime('%s', 'now') - a.password_last_set_time) / 86400 AS INTEGER) < 7;
+  run_script:
+    path: ../../../lib/macos/scripts/laps-macos.sh

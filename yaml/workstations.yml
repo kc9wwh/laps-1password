@@ -1,0 +1,12 @@
+# Teams are available in Fleet Premium.
+
+# This file is an exmaple of the needed policies and scripts for deploying LAPS on macOS and Windows with 1Password.
+
+name: Workstations
+policies:
+  - path: ../lib/macos/policies/macos-laps-admin.policies.yml
+  - path: ../lib/windows/policies/windows-laps-admin.policies.yml
+controls:
+  scripts:
+    - path: ../lib/macos/scripts/laps-macos.sh
+    - path: ../lib/windows/scripts/laps-windows.ps1

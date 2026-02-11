@@ -1,0 +1,13 @@
+- name: Windows - LAPS Admin
+  platform: windows
+  description: This policy checks if the laps-admin account password has been rotated within the last 7 days.
+  resolution: Rotate LAPS admin password and sync with 1Password.
+  query: |
+    SELECT 1
+    FROM windows_eventlog
+    WHERE channel = 'Security'
+      AND eventid IN (4723, 4724)
+      AND JSON_EXTRACT(data, '$.EventData.TargetUserName') = 'laps-admin'
+      AND datetime >= datetime('now', '-7 days');
+  run_script:
+    path: ../../../lib/windows/scripts/laps-windows.ps1
