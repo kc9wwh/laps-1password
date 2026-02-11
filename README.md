@@ -17,7 +17,7 @@ Passwords never leave the 1Password Connect server in plaintext until retrieved 
 - [Fleet Premium](https://fleetdm.com/pricing) (required for policy automations)
 - [1Password Connect server](https://developer.1password.com/docs/connect/get-started/) deployed and accessible from your managed hosts
 - A 1Password vault and API token scoped to that vault
-- `jq` installed on macOS hosts
+- `jq` installed on macOS hosts _*Will be installed automatically by the script_
 
 ## Directory structure
 

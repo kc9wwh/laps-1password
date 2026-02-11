@@ -1,6 +1,6 @@
 #!/bin/bash
 # LAPS Password Management for macOS
-# Version: 1.1.0
+# Version: 1.2.0
 #
 # Creates and manages a hidden local admin account with password stored in 1Password.
 # Passwords are generated server-side by 1Password Connect API.
@@ -97,6 +97,52 @@ mask_string() {
     else
         echo "${str:0:$visible}***"
     fi
+}
+
+ensure_dependencies() {
+    log_info "DEPS" "Checking required dependencies"
+
+    # curl is built into macOS (SIP-protected), no check needed
+    if command -v jq &>/dev/null; then
+        log_debug "DEPS" "jq found at $(command -v jq)"
+        return 0
+    fi
+
+    log_warn "DEPS" "jq not found, attempting to install"
+
+    local arch
+    arch=$(uname -m)
+    local jq_version="1.7.1"
+    local jq_url
+
+    case "$arch" in
+        arm64)  jq_url="https://github.com/jqlang/jq/releases/download/jq-${jq_version}/jq-macos-arm64" ;;
+        x86_64) jq_url="https://github.com/jqlang/jq/releases/download/jq-${jq_version}/jq-macos-amd64" ;;
+        *)
+            log_error "DEPS" "Unsupported architecture: $arch"
+            exit $EXIT_CONFIG_ERROR
+            ;;
+    esac
+
+    local install_path="/usr/local/bin/jq"
+
+    # Ensure /usr/local/bin exists
+    [[ -d /usr/local/bin ]] || mkdir -p /usr/local/bin
+
+    if curl -sL --fail "$jq_url" -o "$install_path" 2>/dev/null; then
+        chmod +x "$install_path"
+        # Remove macOS quarantine flag so Gatekeeper doesn't block execution
+        xattr -dr com.apple.quarantine "$install_path" 2>/dev/null || true
+
+        if command -v jq &>/dev/null; then
+            log_info "DEPS" "jq ${jq_version} installed successfully at ${install_path}"
+            return 0
+        fi
+    fi
+
+    log_error "DEPS" "Failed to install jq automatically"
+    log_error "DEPS" "Install manually: brew install jq OR download from https://jqlang.org/download/"
+    exit $EXIT_CONFIG_ERROR
 }
 
 validate_config() {
@@ -650,6 +696,9 @@ main() {
     if [[ $EUID -ne 0 ]] && [[ "$DRY_RUN" == "1" ]]; then
         log_warn "LAPS" "Not running as root, but continuing in dry run mode"
     fi
+
+    # Ensure required dependencies are available
+    ensure_dependencies
 
     # Validate configuration
     validate_config
